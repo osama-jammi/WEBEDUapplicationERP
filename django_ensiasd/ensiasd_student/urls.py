@@ -1,33 +1,21 @@
-"""
-URLs pour le portail étudiant
-"""
 from django.urls import path
-from . import views
+from .views import (
+    HomeView, LoginView, LogoutView, DashboardView, 
+    NotesView, AbsencesView, EmploiTempsView, 
+    StagesView, ProfileView, ChangePasswordView
+)
 
 app_name = 'student'
 
 urlpatterns = [
-    # Authentification
-    path('', views.LoginView.as_view(), name='home'),
-    path('login/', views.LoginView.as_view(), name='login'),
-    path('logout/', views.LogoutView.as_view(), name='logout'),
-    
-    # Dashboard
-    path('dashboard/', views.DashboardView.as_view(), name='dashboard'),
-    
-    # Notes
-    path('notes/', views.NotesView.as_view(), name='notes'),
-    
-    # Absences
-    path('absences/', views.AbsencesView.as_view(), name='absences'),
-    
-    # Emploi du temps
-    path('emploi-temps/', views.EmploiTempsView.as_view(), name='emploi_temps'),
-    
-    # Stages
-    path('stages/', views.StagesView.as_view(), name='stages'),
-    
-    # Profil
-    path('profile/', views.ProfileView.as_view(), name='profile'),
-    path('profile/password/', views.ChangePasswordView.as_view(), name='change_password'),
+    path('', HomeView.as_view(), name='home'),  # Page d'accueil
+    path('login/', LoginView.as_view(), name='login'),
+    path('logout/', LogoutView.as_view(), name='logout'),
+    path('dashboard/', DashboardView.as_view(), name='dashboard'),
+    path('notes/', NotesView.as_view(), name='notes'),
+    path('absences/', AbsencesView.as_view(), name='absences'),
+    path('emploi-temps/', EmploiTempsView.as_view(), name='emploi_temps'),
+    path('stages/', StagesView.as_view(), name='stages'),
+    path('profile/', ProfileView.as_view(), name='profile'),
+    path('change-password/', ChangePasswordView.as_view(), name='change_password'),
 ]

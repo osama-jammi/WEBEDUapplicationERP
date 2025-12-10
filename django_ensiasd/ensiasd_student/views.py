@@ -23,7 +23,8 @@ class LoginView(View):
     
     def get(self, request):
         # Si déjà connecté, rediriger vers le dashboard
-        if request.session.get('odoo_token'):
+        if request.session.get('odoo_token') and request.session.get('student_data'):
+            logger.info("User already logged in, redirecting to dashboard")
             return redirect('student:dashboard')
         
         form = LoginForm()
@@ -36,9 +37,13 @@ class LoginView(View):
             cne = form.cleaned_data['cne']
             password = form.cleaned_data['password']
             
+            logger.info(f"Login attempt for CNE: {cne}")
+            
             try:
                 client = get_api_client()
                 response = client.login(cne, password)
+                
+                logger.info(f"API response: {response.get('success')}")
                 
                 if response.get('success'):
                     data = response['data']
@@ -48,13 +53,22 @@ class LoginView(View):
                     request.session['token_expires'] = data['expires_at']
                     request.session['student_data'] = data['student']
                     
+                    # Sauvegarder explicitement la session
+                    request.session.modified = True
+                    
+                    logger.info(f"Login successful for {data['student']['name']}, token stored in session")
+                    
                     messages.success(request, f"Bienvenue {data['student']['name']}!")
+                    
+                    # Redirection explicite
                     return redirect('student:dashboard')
                 else:
-                    messages.error(request, "Identifiants incorrects")
+                    error_msg = response.get('error', {}).get('message', 'Identifiants incorrects')
+                    logger.warning(f"Login failed: {error_msg}")
+                    messages.error(request, error_msg)
                     
             except OdooAPIError as e:
-                logger.error(f"Login error: {e.message}")
+                logger.error(f"Login API error: {e.message} (status: {e.status_code})")
                 if e.status_code == 401:
                     messages.error(request, "CNE ou mot de passe incorrect")
                 else:
@@ -62,6 +76,8 @@ class LoginView(View):
             except Exception as e:
                 logger.exception("Login exception")
                 messages.error(request, "Service temporairement indisponible")
+        else:
+            logger.warning(f"Form validation errors: {form.errors}")
         
         return render(request, self.template_name, {'form': form})
 
@@ -76,7 +92,9 @@ class LogoutView(View):
             try:
                 client = get_api_client(token)
                 client.logout()
-            except Exception:
+                logger.info("Logout successful")
+            except Exception as e:
+                logger.warning(f"Logout error: {e}")
                 pass  # Ignorer les erreurs de logout
         
         request.session.flush()
@@ -90,41 +108,74 @@ class DashboardView(TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        client = self.request.odoo_client
+        
+        # Vérifier d'abord si l'utilisateur est connecté
+        if not self.request.session.get('odoo_token'):
+            logger.warning("Dashboard accessed without token, redirecting to login")
+            # Cette redirection sera gérée par le middleware
+            return context
         
         try:
+            # Obtenir le client API de différentes façons
+            if hasattr(self.request, 'odoo_client'):
+                client = self.request.odoo_client
+            else:
+                # Créer un client directement à partir de la session
+                from .api_client import get_api_client
+                token = self.request.session.get('odoo_token')
+                if not token:
+                    logger.error("No token in session")
+                    return context
+                
+                client = get_api_client(token)
+            
+            logger.info(f"Dashboard loading for: {self.request.session.get('student_data', {}).get('name')}")
+            
             # Récupérer les données du dashboard
-            profile = client.get_profile()
-            notes_summary = client.get_notes_summary()
-            absences_summary = client.get_absences_summary()
+            profile_response = client.get_profile()
+            notes_response = client.get_notes_summary()
+            absences_response = client.get_absences_summary()
             
-            # Emploi du temps de la semaine
-            today = timezone.now().date()
-            week_start = today - timedelta(days=today.weekday())
-            week_end = week_start + timedelta(days=6)
-            
-            emploi_temps = client.get_emploi_temps(
-                date_from=week_start.isoformat(),
-                date_to=week_end.isoformat()
-            )
+            # Récupérer les données de la session comme fallback
+            current_student = self.request.session.get('student_data', {})
             
             context.update({
-                'profile': profile.get('data', {}),
-                'notes_summary': notes_summary.get('data', []),
-                'absences_summary': absences_summary.get('data', {}),
-                'seances_semaine': emploi_temps.get('data', [])[:5],
-                'today': today,
+                'current_student': current_student,
+                'today': timezone.now().date(),
+                'profile': profile_response.get('data', {}),
+                'notes_summary': notes_response.get('data', []),
+                'absences_summary': absences_response.get('data', {}),
             })
             
-        except OdooAPIError as e:
-            messages.error(self.request, f"Erreur: {e.message}")
+            # Essayer de récupérer l'emploi du temps
+            try:
+                today = timezone.now().date()
+                week_start = today - timedelta(days=today.weekday())
+                week_end = week_start + timedelta(days=6)
+                
+                emploi_temps = client.get_emploi_temps(
+                    date_from=week_start.isoformat(),
+                    date_to=week_end.isoformat()
+                )
+                context['seances_semaine'] = emploi_temps.get('data', [])[:5]
+            except Exception as e:
+                logger.warning(f"Could not load schedule: {e}")
+                context['seances_semaine'] = []
+            
+            logger.info("Dashboard loaded successfully")
+            
         except Exception as e:
-            logger.exception("Dashboard error")
-            messages.error(self.request, "Erreur lors du chargement des données")
+            logger.error(f"Dashboard error: {str(e)}")
+            # Utiliser les données de session comme fallback
+            context.update({
+                'current_student': self.request.session.get('student_data', {}),
+                'today': timezone.now().date(),
+                'notes_summary': [],
+                'absences_summary': {},
+                'seances_semaine': [],
+            })
         
         return context
-
-
 class NotesView(TemplateView):
     """Vue des notes"""
     template_name = 'student/notes.html'
@@ -269,6 +320,18 @@ class EmploiTempsView(TemplateView):
         return context
 
 
+class HomeView(TemplateView):
+    """Page d'accueil"""
+    template_name = 'student/home.html'
+    
+    def get(self, request):
+        # Si déjà connecté, rediriger vers le dashboard
+        if request.session.get('odoo_token'):
+            logger.info("User already logged in, redirecting to dashboard")
+            return redirect('student:dashboard')
+        return render(request, self.template_name)
+    
+
 class StagesView(TemplateView):
     """Vue des stages"""
     template_name = 'student/stages.html'
@@ -321,32 +384,62 @@ class ChangePasswordView(View):
     def get(self, request):
         form = ChangePasswordForm()
         return render(request, self.template_name, {'form': form})
-    
     def post(self, request):
-        form = ChangePasswordForm(request.POST)
+        form = LoginForm(request.POST)
         
         if form.is_valid():
-            old_password = form.cleaned_data['old_password']
-            new_password = form.cleaned_data['new_password']
+            cne = form.cleaned_data['cne']
+            password = form.cleaned_data['password']
+            
+            logger.info(f"Login attempt for CNE: {cne}")
             
             try:
-                client = request.odoo_client
-                response = client.change_password(old_password, new_password)
+                client = get_api_client()
+                response = client.login(cne, password)
+                
+                logger.info(f"API response: {response.get('success')}")
                 
                 if response.get('success'):
-                    messages.success(request, "Mot de passe modifié avec succès")
-                    return redirect('student:profile')
+                    data = response['data']
+                    
+                    # Stocker les infos en session
+                    request.session['odoo_token'] = data['token']
+                    request.session['token_expires'] = data['expires_at']
+                    request.session['student_data'] = data['student']
+                    
+                    # Sauvegarder explicitement la session
+                    request.session.modified = True
+                    
+                    logger.info(f"Login successful for {data['student']['name']}, token stored in session")
+                    
+                    messages.success(request, f"Bienvenue {data['student']['name']}!")
+                    
+                    # Redirection après login
+                    next_url = request.session.pop('next_url', None)
+                    if next_url and next_url != '/login/':
+                        logger.info(f"Redirecting to requested URL: {next_url}")
+                        return redirect(next_url)
+                    else:
+                        logger.info("Redirecting to default dashboard")
+                        return redirect('student:dashboard')
                 else:
-                    messages.error(request, "Erreur lors du changement de mot de passe")
+                    error_msg = response.get('error', {}).get('message', 'Identifiants incorrects')
+                    logger.warning(f"Login failed: {error_msg}")
+                    messages.error(request, error_msg)
                     
             except OdooAPIError as e:
-                messages.error(request, f"Erreur: {e.message}")
+                logger.error(f"Login API error: {e.message} (status: {e.status_code})")
+                if e.status_code == 401:
+                    messages.error(request, "CNE ou mot de passe incorrect")
+                else:
+                    messages.error(request, f"Erreur de connexion: {e.message}")
             except Exception as e:
-                logger.exception("Change password error")
-                messages.error(request, "Erreur lors du changement de mot de passe")
+                logger.exception("Login exception")
+                messages.error(request, "Service temporairement indisponible")
+        else:
+            logger.warning(f"Form validation errors: {form.errors}")
         
         return render(request, self.template_name, {'form': form})
-
 
 # =============================================================================
 # VUES API JSON (pour AJAX)

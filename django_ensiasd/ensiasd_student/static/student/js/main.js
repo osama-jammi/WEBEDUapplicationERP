@@ -20,35 +20,39 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     });
     
-    // Form validation
-    var forms = document.querySelectorAll('form');
+    // Form validation - NE PAS BLOQUER la soumission des formulaires valides
+    var forms = document.querySelectorAll('form:not(.no-validation)');
     forms.forEach(function(form) {
         form.addEventListener('submit', function(event) {
+            // Seulement empêcher si le formulaire est invalide
             if (!form.checkValidity()) {
                 event.preventDefault();
                 event.stopPropagation();
             }
             form.classList.add('was-validated');
-        });
+        }, false);
     });
     
     // Loading state for buttons
     var submitButtons = document.querySelectorAll('button[type="submit"]');
     submitButtons.forEach(function(button) {
-        button.addEventListener('click', function() {
-            var form = button.closest('form');
-            if (form && form.checkValidity()) {
-                button.disabled = true;
-                var originalText = button.innerHTML;
-                button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Chargement...';
-                
-                // Re-enable after 10 seconds (safety)
-                setTimeout(function() {
-                    button.disabled = false;
-                    button.innerHTML = originalText;
-                }, 10000);
-            }
-        });
+        var form = button.closest('form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                // Seulement si le formulaire est valide
+                if (form.checkValidity()) {
+                    button.disabled = true;
+                    var originalText = button.innerHTML;
+                    button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Chargement...';
+                    
+                    // Re-enable after 10 seconds (safety)
+                    setTimeout(function() {
+                        button.disabled = false;
+                        button.innerHTML = originalText;
+                    }, 10000);
+                }
+            });
+        }
     });
     
     // Smooth scroll for anchor links
