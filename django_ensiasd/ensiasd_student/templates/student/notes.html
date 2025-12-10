@@ -1,0 +1,172 @@
+{% extends 'student/base.html' %}
+
+{% block title %}Mes Notes{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-journal-check text-primary me-2"></i>
+                Mes Notes
+            </h1>
+            <p class="text-muted mb-0">Consultez vos résultats académiques</p>
+        </div>
+    </div>
+    
+    <!-- Filtres -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Année universitaire</label>
+                    <select name="annee_id" class="form-select">
+                        <option value="">Toutes les années</option>
+                        {% for annee in annees %}
+                        <option value="{{ annee.id }}" {% if current_annee == annee.id|stringformat:"s" %}selected{% endif %}>
+                            {{ annee.name }} {% if annee.is_current %}(en cours){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Module</label>
+                    <select name="module_id" class="form-select">
+                        <option value="">Tous les modules</option>
+                        {% for module in modules %}
+                        <option value="{{ module.id }}" {% if current_module == module.id|stringformat:"s" %}selected{% endif %}>
+                            {{ module.code }} - {{ module.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-filter me-1"></i> Filtrer
+                    </button>
+                    <a href="{% url 'student:notes' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i> Réinitialiser
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Résumé par module -->
+    {% if notes_summary %}
+    <div class="row g-4 mb-4">
+        {% for item in notes_summary %}
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="card-title mb-1">{{ item.module.code }}</h6>
+                            <small class="text-muted">{{ item.module.name }}</small>
+                        </div>
+                        <span class="badge {% if item.moyenne >= 12 %}bg-success{% elif item.moyenne >= 10 %}bg-warning{% else %}bg-danger{% endif %} fs-6">
+                            {{ item.moyenne }}/20
+                        </span>
+                    </div>
+                    
+                    <!-- Progress bar -->
+                    <div class="progress mb-3" style="height: 8px;">
+                        <div class="progress-bar {% if item.moyenne >= 12 %}bg-success{% elif item.moyenne >= 10 %}bg-warning{% else %}bg-danger{% endif %}" 
+                             style="width: {% widthratio item.moyenne 20 100 %}%"></div>
+                    </div>
+                    
+                    <small class="text-muted">{{ item.nb_notes }} note(s) enregistrée(s)</small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Tableau des notes -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">Détail des notes</h5>
+        </div>
+        <div class="card-body">
+            {% if notes %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Module</th>
+                            <th>Type</th>
+                            <th class="text-center">Note</th>
+                            <th class="text-center">Coefficient</th>
+                            <th>Date</th>
+                            <th>Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for note in notes %}
+                        <tr>
+                            <td>
+                                <strong>{{ note.module.code }}</strong>
+                                <br>
+                                <small class="text-muted">{{ note.module.name }}</small>
+                            </td>
+                            <td>
+                                {% if note.type_eval == 'cc' %}
+                                <span class="badge bg-info">Contrôle Continu</span>
+                                {% elif note.type_eval == 'examen' %}
+                                <span class="badge bg-primary">Examen Final</span>
+                                {% elif note.type_eval == 'tp' %}
+                                <span class="badge bg-success">TP/Pratique</span>
+                                {% elif note.type_eval == 'projet' %}
+                                <span class="badge bg-warning text-dark">Projet</span>
+                                {% elif note.type_eval == 'rattrapage' %}
+                                <span class="badge bg-secondary">Rattrapage</span>
+                                {% else %}
+                                <span class="badge bg-light text-dark">{{ note.type_eval }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <span class="fw-bold fs-5 {% if note.valeur >= 12 %}text-success{% elif note.valeur >= 10 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ note.valeur }}/20
+                                </span>
+                            </td>
+                            <td class="text-center">{{ note.coefficient }}</td>
+                            <td>
+                                {% if note.date_eval %}
+                                {{ note.date_eval }}
+                                {% else %}
+                                <span class="text-muted">--</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if note.state == 'validated' %}
+                                <span class="badge bg-success">Validée</span>
+                                {% elif note.state == 'confirmed' %}
+                                <span class="badge bg-info">Confirmée</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Brouillon</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if note.observations %}
+                        <tr>
+                            <td colspan="6" class="bg-light">
+                                <small><i class="bi bi-chat-left-text me-1"></i> {{ note.observations }}</small>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-journal-x display-1 text-muted"></i>
+                <h4 class="mt-4 text-muted">Aucune note trouvée</h4>
+                <p class="text-muted">Les notes seront affichées ici une fois saisies par vos enseignants.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

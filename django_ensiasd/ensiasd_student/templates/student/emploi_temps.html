@@ -1,0 +1,132 @@
+{% extends 'student/base.html' %}
+
+{% block title %}Emploi du temps{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-calendar-week text-primary me-2"></i>
+                Emploi du temps
+            </h1>
+            <p class="text-muted mb-0">
+                Semaine du {{ week_start|date:"d/m/Y" }} au {{ week_end|date:"d/m/Y" }}
+            </p>
+        </div>
+        <div>
+            <a href="?week={{ week_offset|add:-1 }}" class="btn btn-outline-primary">
+                <i class="bi bi-chevron-left"></i> Semaine précédente
+            </a>
+            <a href="?week=0" class="btn btn-primary">
+                Aujourd'hui
+            </a>
+            <a href="?week={{ week_offset|add:1 }}" class="btn btn-outline-primary">
+                Semaine suivante <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
+    </div>
+    
+    <!-- Calendrier -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered mb-0 emploi-temps-table">
+                    <thead class="table-light">
+                        <tr>
+                            {% for i in "012345" %}
+                            {% with day_num=i|add:0 %}
+                            <th class="text-center {% if today.weekday == day_num and week_offset == 0 %}bg-primary text-white{% endif %}" 
+                                style="min-width: 150px;">
+                                {{ days|slice:":6"|slice:i|first }}
+                                <br>
+                                <small>
+                                    {% with offset=day_num %}
+                                    {% endwith %}
+                                </small>
+                            </th>
+                            {% endwith %}
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            {% for i in "012345" %}
+                            {% with day_num=i|add:0 %}
+                            <td class="p-2 align-top {% if today.weekday == day_num and week_offset == 0 %}bg-light{% endif %}">
+                                {% for seance in seances_par_jour|dict_get:day_num %}
+                                <div class="seance-card mb-2 p-2 rounded 
+                                    {% if seance.element.type == 'cm' %}bg-primary{% elif seance.element.type == 'td' %}bg-success{% else %}bg-info{% endif %} 
+                                    text-white">
+                                    <div class="fw-bold small">
+                                        {{ seance.module.code }}
+                                    </div>
+                                    <div class="small">
+                                        {{ seance.element.name }} ({{ seance.element.type|upper }})
+                                    </div>
+                                    <div class="small mt-1">
+                                        <i class="bi bi-clock"></i>
+                                        {{ seance.heure_debut|floatformat:0 }}h - {{ seance.heure_fin|floatformat:0 }}h
+                                    </div>
+                                    {% if seance.salle %}
+                                    <div class="small">
+                                        <i class="bi bi-geo-alt"></i>
+                                        {{ seance.salle.name }}
+                                    </div>
+                                    {% endif %}
+                                    {% if seance.enseignant %}
+                                    <div class="small">
+                                        <i class="bi bi-person"></i>
+                                        {{ seance.enseignant.name }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% empty %}
+                                <div class="text-center text-muted py-4">
+                                    <i class="bi bi-calendar-check"></i>
+                                    <br>
+                                    <small>Pas de cours</small>
+                                </div>
+                                {% endfor %}
+                            </td>
+                            {% endwith %}
+                            {% endfor %}
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Légende -->
+    <div class="mt-4">
+        <h6>Légende:</h6>
+        <span class="badge bg-primary me-2">CM - Cours Magistral</span>
+        <span class="badge bg-success me-2">TD - Travaux Dirigés</span>
+        <span class="badge bg-info me-2">TP - Travaux Pratiques</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.emploi-temps-table th {
+    vertical-align: middle;
+}
+
+.emploi-temps-table td {
+    min-height: 150px;
+}
+
+.seance-card {
+    font-size: 0.85rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.seance-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transition: all 0.2s ease;
+}
+</style>
+{% endblock %}

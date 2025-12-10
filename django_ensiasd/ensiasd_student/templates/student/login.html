@@ -1,0 +1,113 @@
+{% extends 'student/base.html' %}
+{% load static %}
+
+{% block title %}Connexion{% endblock %}
+{% block body_class %}login-page{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-box">
+        <div class="login-header text-center mb-4">
+            <div class="logo mb-3">
+                <i class="bi bi-mortarboard-fill display-1 text-primary"></i>
+            </div>
+            <h1 class="h3 mb-2">{{ SCHOOL_NAME }}</h1>
+            <p class="text-muted">Portail Étudiant</p>
+        </div>
+        
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <h2 class="card-title h5 mb-4 text-center">Connexion</h2>
+                
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="id_cne" class="form-label">
+                            <i class="bi bi-person me-1"></i> CNE
+                        </label>
+                        {{ form.cne }}
+                        {% if form.cne.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.cne.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_password" class="form-label">
+                            <i class="bi bi-lock me-1"></i> Mot de passe
+                        </label>
+                        {{ form.password }}
+                        {% if form.password.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.password.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        {{ form.remember_me }}
+                        <label class="form-check-label" for="id_remember_me">
+                            Se souvenir de moi
+                        </label>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>
+                            Se connecter
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <small class="text-muted">
+                <i class="bi bi-question-circle me-1"></i>
+                Première connexion? Utilisez votre CNE et le mot de passe fourni par la scolarité.
+            </small>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.login-container {
+    width: 100%;
+    max-width: 420px;
+    padding: 20px;
+}
+
+.login-box .logo i {
+    background: linear-gradient(135deg, #fff 0%, #e0e0e0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.login-header h1,
+.login-header p {
+    color: white;
+}
+
+.login-box .card {
+    border: none;
+    border-radius: 15px;
+}
+
+.login-box .text-muted {
+    color: rgba(255,255,255,0.8) !important;
+}
+</style>
+{% endblock %}

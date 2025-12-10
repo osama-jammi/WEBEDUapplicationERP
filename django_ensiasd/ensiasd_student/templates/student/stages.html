@@ -1,0 +1,149 @@
+{% extends 'student/base.html' %}
+
+{% block title %}Mes Stages{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-briefcase text-primary me-2"></i>
+                Mes Stages
+            </h1>
+            <p class="text-muted mb-0">Suivi de vos stages et PFE</p>
+        </div>
+    </div>
+    
+    {% if stages %}
+    <div class="row g-4">
+        {% for stage in stages %}
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ stage.name }}</h5>
+                    <span class="badge 
+                        {% if stage.state == 'done' %}bg-success
+                        {% elif stage.state == 'in_progress' %}bg-primary
+                        {% elif stage.state == 'approved' %}bg-info
+                        {% elif stage.state == 'submitted' %}bg-warning
+                        {% elif stage.state == 'defense' %}bg-purple
+                        {% elif stage.state == 'cancelled' %}bg-danger
+                        {% else %}bg-secondary{% endif %}">
+                        {% if stage.state == 'draft' %}Brouillon
+                        {% elif stage.state == 'submitted' %}Soumis
+                        {% elif stage.state == 'approved' %}Approuvé
+                        {% elif stage.state == 'in_progress' %}En cours
+                        {% elif stage.state == 'defense' %}Soutenance
+                        {% elif stage.state == 'done' %}Terminé
+                        {% elif stage.state == 'cancelled' %}Annulé
+                        {% else %}{{ stage.state }}{% endif %}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary">{{ stage.sujet }}</h6>
+                    
+                    <div class="row mt-3">
+                        <div class="col-6">
+                            <small class="text-muted d-block">Type</small>
+                            <strong>
+                                {% if stage.type_stage == 'observation' %}Stage d'observation
+                                {% elif stage.type_stage == 'technicien' %}Stage technicien
+                                {% elif stage.type_stage == 'ingenieur' %}Stage ingénieur
+                                {% elif stage.type_stage == 'pfe' %}PFE
+                                {% else %}{{ stage.type_stage }}{% endif %}
+                            </strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Durée</small>
+                            <strong>{{ stage.date_debut }} - {{ stage.date_fin }}</strong>
+                        </div>
+                    </div>
+                    
+                    {% if stage.entreprise %}
+                    <hr>
+                    <div class="d-flex align-items-center">
+                        <div class="bg-light rounded-3 p-2 me-3">
+                            <i class="bi bi-building fs-4 text-muted"></i>
+                        </div>
+                        <div>
+                            <strong>{{ stage.entreprise.name }}</strong>
+                            {% if stage.entreprise.city %}
+                            <br><small class="text-muted">{{ stage.entreprise.city }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <hr>
+                    
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted d-block">Encadrant interne</small>
+                            {% if stage.encadrant_interne %}
+                            <strong>{{ stage.encadrant_interne.name }}</strong>
+                            {% else %}
+                            <span class="text-muted">Non assigné</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Encadrant externe</small>
+                            {% if stage.encadrant_externe %}
+                            <strong>{{ stage.encadrant_externe }}</strong>
+                            {% else %}
+                            <span class="text-muted">Non assigné</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if stage.note_finale or stage.mention %}
+                    <hr>
+                    <div class="row">
+                        {% if stage.note_finale %}
+                        <div class="col-6">
+                            <small class="text-muted d-block">Note finale</small>
+                            <span class="fs-4 fw-bold {% if stage.note_finale >= 12 %}text-success{% elif stage.note_finale >= 10 %}text-warning{% else %}text-danger{% endif %}">
+                                {{ stage.note_finale }}/20
+                            </span>
+                        </div>
+                        {% endif %}
+                        {% if stage.mention %}
+                        <div class="col-6">
+                            <small class="text-muted d-block">Mention</small>
+                            <strong>{{ stage.mention }}</strong>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-briefcase display-1 text-muted"></i>
+            <h4 class="mt-4 text-muted">Aucun stage enregistré</h4>
+            <p class="text-muted">
+                Vos stages apparaîtront ici une fois que vous aurez déposé une convention.
+            </p>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Info -->
+    <div class="alert alert-info mt-4" role="alert">
+        <h5 class="alert-heading">
+            <i class="bi bi-info-circle me-2"></i>
+            Procédure de stage
+        </h5>
+        <ol class="mb-0">
+            <li>Trouvez une entreprise d'accueil</li>
+            <li>Obtenez l'accord de votre encadrant interne</li>
+            <li>Déposez votre convention au service des stages</li>
+            <li>Attendez la validation de l'administration</li>
+            <li>Démarrez votre stage</li>
+        </ol>
+    </div>
+</div>
+{% endblock %}

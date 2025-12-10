@@ -1,0 +1,264 @@
+{% extends 'student/base.html' %}
+{% load static %}
+
+{% block title %}Tableau de bord{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Bonjour, {{ current_student.name }}!</h1>
+            <p class="text-muted mb-0">
+                <i class="bi bi-calendar3 me-1"></i>
+                {{ today|date:"l d F Y" }}
+            </p>
+        </div>
+        <div class="text-end">
+            <span class="badge bg-primary fs-6">
+                <i class="bi bi-mortarboard me-1"></i>
+                {{ current_student.niveau }}ère année
+            </span>
+            {% if current_student.groupe %}
+            <span class="badge bg-secondary fs-6 ms-2">
+                {{ current_student.groupe.name }}
+            </span>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="row g-4 mb-4">
+        <!-- Moyenne générale -->
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-primary bg-opacity-10 rounded-3 p-3">
+                                <i class="bi bi-graph-up text-primary fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="text-muted mb-1">Moyenne générale</h6>
+                            <h3 class="mb-0">
+                                {% if notes_summary %}
+                                    {% widthratio notes_summary|length 1 1 as count %}
+                                    {% with total=0 %}
+                                    --
+                                    {% endwith %}
+                                {% else %}
+                                --
+                                {% endif %}
+                            </h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modules -->
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-success bg-opacity-10 rounded-3 p-3">
+                                <i class="bi bi-book text-success fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="text-muted mb-1">Modules inscrits</h6>
+                            <h3 class="mb-0">{{ notes_summary|length|default:"0" }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Absences -->
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-warning bg-opacity-10 rounded-3 p-3">
+                                <i class="bi bi-calendar-x text-warning fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="text-muted mb-1">Absences</h6>
+                            <h3 class="mb-0">{{ absences_summary.total|default:"0" }}</h3>
+                            <small class="text-muted">
+                                {{ absences_summary.non_justifiees|default:"0" }} non justifiées
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Séances aujourd'hui -->
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-info bg-opacity-10 rounded-3 p-3">
+                                <i class="bi bi-clock text-info fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="text-muted mb-1">Séances cette semaine</h6>
+                            <h3 class="mb-0">{{ seances_semaine|length|default:"0" }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row g-4">
+        <!-- Notes récentes -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-journal-check text-primary me-2"></i>
+                        Notes par module
+                    </h5>
+                    <a href="{% url 'student:notes' %}" class="btn btn-sm btn-outline-primary">
+                        Voir tout <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if notes_summary %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Module</th>
+                                    <th class="text-center">Nb Notes</th>
+                                    <th class="text-center">Moyenne</th>
+                                    <th class="text-center">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in notes_summary %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ item.module.code }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ item.module.name }}</small>
+                                    </td>
+                                    <td class="text-center">{{ item.nb_notes }}</td>
+                                    <td class="text-center">
+                                        <span class="fw-bold {% if item.moyenne >= 12 %}text-success{% elif item.moyenne >= 10 %}text-warning{% else %}text-danger{% endif %}">
+                                            {{ item.moyenne }}/20
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if item.moyenne >= 12 %}
+                                        <span class="badge bg-success">Validé</span>
+                                        {% elif item.moyenne >= 10 %}
+                                        <span class="badge bg-warning text-dark">En cours</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">À rattraper</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-journal-x display-4 text-muted"></i>
+                        <p class="text-muted mt-3">Aucune note disponible pour le moment</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Prochaines séances -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calendar-event text-primary me-2"></i>
+                        Prochaines séances
+                    </h5>
+                    <a href="{% url 'student:emploi_temps' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    {% if seances_semaine %}
+                    <ul class="list-group list-group-flush">
+                        {% for seance in seances_semaine %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">{{ seance.module.code }}</h6>
+                                    <small class="text-muted">
+                                        {{ seance.element.name }} ({{ seance.element.type|upper }})
+                                    </small>
+                                </div>
+                                <span class="badge bg-light text-dark">
+                                    {{ seance.date }}
+                                </span>
+                            </div>
+                            <div class="mt-2 small">
+                                <span class="text-primary">
+                                    <i class="bi bi-clock me-1"></i>
+                                    {{ seance.heure_debut|floatformat:2 }}h - {{ seance.heure_fin|floatformat:2 }}h
+                                </span>
+                                {% if seance.salle %}
+                                <span class="text-muted ms-3">
+                                    <i class="bi bi-geo-alt me-1"></i>
+                                    {{ seance.salle.name }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-calendar-check display-4 text-muted"></i>
+                        <p class="text-muted mt-3 mb-0">Aucune séance prévue cette semaine</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Quick Links -->
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightning text-primary me-2"></i>
+                        Accès rapide
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'student:notes' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-journal-check me-2"></i> Mes notes
+                        </a>
+                        <a href="{% url 'student:absences' %}" class="btn btn-outline-warning">
+                            <i class="bi bi-calendar-x me-2"></i> Mes absences
+                        </a>
+                        <a href="{% url 'student:stages' %}" class="btn btn-outline-info">
+                            <i class="bi bi-briefcase me-2"></i> Mes stages
+                        </a>
+                        <a href="{% url 'student:profile' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-person me-2"></i> Mon profil
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

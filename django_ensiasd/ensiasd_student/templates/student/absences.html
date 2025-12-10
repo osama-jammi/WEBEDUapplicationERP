@@ -1,0 +1,164 @@
+{% extends 'student/base.html' %}
+
+{% block title %}Mes Absences{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-calendar-x text-warning me-2"></i>
+                Mes Absences
+            </h1>
+            <p class="text-muted mb-0">Suivi de votre assiduité</p>
+        </div>
+    </div>
+    
+    <!-- Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-primary text-white">
+                <div class="card-body text-center">
+                    <h2 class="display-4 mb-0">{{ absences_summary.total|default:"0" }}</h2>
+                    <p class="mb-0">Total absences</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-success text-white">
+                <div class="card-body text-center">
+                    <h2 class="display-4 mb-0">{{ absences_summary.justifiees|default:"0" }}</h2>
+                    <p class="mb-0">Justifiées</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-danger text-white">
+                <div class="card-body text-center">
+                    <h2 class="display-4 mb-0">{{ absences_summary.non_justifiees|default:"0" }}</h2>
+                    <p class="mb-0">Non justifiées</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filtres -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Année universitaire</label>
+                    <select name="annee_id" class="form-select">
+                        <option value="">Toutes</option>
+                        {% for annee in annees %}
+                        <option value="{{ annee.id }}" {% if current_annee == annee.id|stringformat:"s" %}selected{% endif %}>
+                            {{ annee.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Du</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ current_date_from }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Au</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ current_date_to }}">
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-filter me-1"></i> Filtrer
+                    </button>
+                    <a href="{% url 'student:absences' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Liste des absences -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">Liste des absences</h5>
+        </div>
+        <div class="card-body">
+            {% if absences %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Module</th>
+                            <th>Séance</th>
+                            <th class="text-center">Statut</th>
+                            <th>Motif</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for absence in absences %}
+                        <tr>
+                            <td>
+                                <strong>{{ absence.date }}</strong>
+                            </td>
+                            <td>
+                                {% if absence.module %}
+                                {{ absence.module.code }} - {{ absence.module.name }}
+                                {% else %}
+                                <span class="text-muted">--</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if absence.seance %}
+                                {{ absence.seance.name }}
+                                {% else %}
+                                <span class="text-muted">--</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if absence.justifiee %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle me-1"></i> Justifiée
+                                </span>
+                                {% else %}
+                                <span class="badge bg-danger">
+                                    <i class="bi bi-x-circle me-1"></i> Non justifiée
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if absence.motif %}
+                                {{ absence.motif }}
+                                {% else %}
+                                <span class="text-muted">--</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-emoji-smile display-1 text-success"></i>
+                <h4 class="mt-4 text-muted">Aucune absence enregistrée</h4>
+                <p class="text-muted">Continuez comme ça!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Info box -->
+    <div class="alert alert-info mt-4" role="alert">
+        <h5 class="alert-heading">
+            <i class="bi bi-info-circle me-2"></i>
+            Important
+        </h5>
+        <p class="mb-0">
+            Les absences non justifiées peuvent impacter votre évaluation. 
+            En cas d'absence justifiée, veuillez déposer votre justificatif 
+            au service de scolarité dans les 48 heures.
+        </p>
+    </div>
+</div>
+{% endblock %}
