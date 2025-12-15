@@ -380,67 +380,48 @@ class ProfileView(TemplateView):
 class ChangePasswordView(View):
     """Vue de changement de mot de passe"""
     template_name = 'student/change_password.html'
-    
+
     def get(self, request):
         form = ChangePasswordForm()
         return render(request, self.template_name, {'form': form})
+
     def post(self, request):
-        form = LoginForm(request.POST)
-        
+        form = ChangePasswordForm(request.POST)
+
         if form.is_valid():
-            cne = form.cleaned_data['cne']
-            password = form.cleaned_data['password']
-            
-            logger.info(f"Login attempt for CNE: {cne}")
-            
+            old_password = form.cleaned_data['old_password']
+            new_password = form.cleaned_data['new_password']
+
+            logger.info(f"Password change attempt for {request.student.get('name')}")
+
             try:
-                client = get_api_client()
-                response = client.login(cne, password)
-                
-                logger.info(f"API response: {response.get('success')}")
-                
+                client = request.odoo_client
+                response = client.change_password(old_password, new_password)
+
+                logger.info(f"Password change response: {response.get('success')}")
+
                 if response.get('success'):
-                    data = response['data']
-                    
-                    # Stocker les infos en session
-                    request.session['odoo_token'] = data['token']
-                    request.session['token_expires'] = data['expires_at']
-                    request.session['student_data'] = data['student']
-                    
-                    # Sauvegarder explicitement la session
-                    request.session.modified = True
-                    
-                    logger.info(f"Login successful for {data['student']['name']}, token stored in session")
-                    
-                    messages.success(request, f"Bienvenue {data['student']['name']}!")
-                    
-                    # Redirection après login
-                    next_url = request.session.pop('next_url', None)
-                    if next_url and next_url != '/login/':
-                        logger.info(f"Redirecting to requested URL: {next_url}")
-                        return redirect(next_url)
-                    else:
-                        logger.info("Redirecting to default dashboard")
-                        return redirect('student:dashboard')
+                    messages.success(request, "Votre mot de passe a été modifié avec succès!")
+                    logger.info("Password change successful")
+                    return redirect('student:profile')
                 else:
-                    error_msg = response.get('error', {}).get('message', 'Identifiants incorrects')
-                    logger.warning(f"Login failed: {error_msg}")
+                    error_msg = response.get('error', {}).get('message', 'Erreur lors du changement')
+                    logger.warning(f"Password change failed: {error_msg}")
                     messages.error(request, error_msg)
-                    
+
             except OdooAPIError as e:
-                logger.error(f"Login API error: {e.message} (status: {e.status_code})")
+                logger.error(f"Password change API error: {e.message}")
                 if e.status_code == 401:
-                    messages.error(request, "CNE ou mot de passe incorrect")
+                    messages.error(request, "Mot de passe actuel incorrect")
                 else:
-                    messages.error(request, f"Erreur de connexion: {e.message}")
+                    messages.error(request, f"Erreur: {e.message}")
             except Exception as e:
-                logger.exception("Login exception")
-                messages.error(request, "Service temporairement indisponible")
+                logger.exception("Password change exception")
+                messages.error(request, "Erreur lors du changement de mot de passe")
         else:
             logger.warning(f"Form validation errors: {form.errors}")
-        
-        return render(request, self.template_name, {'form': form})
 
+        return render(request, self.template_name, {'form': form})
 # =============================================================================
 # VUES API JSON (pour AJAX)
 # =============================================================================

@@ -13,69 +13,72 @@ logger = logging.getLogger(__name__)
 class OdooTokenMiddleware:
     """Middleware pour injecter le client API avec le token de session"""
     
-    # URLs exemptées de l'authentification (DOIVENT ÊTRE ACCESSIBLES SANS LOGIN)
+    # URLs exemptées de l'authentification (ACCESSIBLES SANS LOGIN)
     EXEMPT_URLS = [
-        '/',            # Page d'accueil
+        '/',            # Page d'accueil uniquement
         '/login/',      # Page de connexion
         '/logout/',     # Déconnexion
+        '/admin/',      # Admin Django
+    ]
+
+    # Préfixes d'URLs exemptés (pour les fichiers statiques, etc.)
+    EXEMPT_PREFIXES = [
         '/static/',     # Fichiers statiques
         '/media/',      # Fichiers média
-        '/admin/',      # Admin Django
-        '/favicon.ico', # Favicon
-        # AJOUTEZ ICI toutes les URLs de l'API si elles sont publiques
     ]
-    
-    # URLs qui nécessitent l'authentification (PROTÉGÉES)
-    # Toutes les autres URLs nécessitent un token
-    
+
     def __init__(self, get_response):
         self.get_response = get_response
-    
+
     def __call__(self, request):
-        path = request.path_info  # Utiliser path_info au lieu de path
-        
+        path = request.path_info
+
         logger.debug(f"Middleware checking path: {path}, method: {request.method}")
-        
-        # Vérifier si c'est une URL exemptée
-        is_exempt = any(
-            path == exempt_url or 
-            path.startswith(exempt_url.rstrip('/') + '/') 
-            for exempt_url in self.EXEMPT_URLS
-        )
-        
-        if is_exempt:
-            logger.debug(f"Path {path} is exempt, passing through")
+
+        # Vérifier si c'est une URL exemptée EXACTE
+        if path in self.EXEMPT_URLS:
+            logger.debug(f"Path {path} is exempt (exact match)")
             return self.get_response(request)
-        
-        # Vérifier l'authentification pour les URLs protégées
+
+        # Vérifier si c'est un préfixe exempté (static, media, etc.)
+        for prefix in self.EXEMPT_PREFIXES:
+            if path.startswith(prefix):
+                logger.debug(f"Path {path} is exempt (prefix match: {prefix})")
+                return self.get_response(request)
+
+        # Tous les autres chemins nécessitent une authentification
         token = request.session.get('odoo_token')
         student_data = request.session.get('student_data')
-        
+
         logger.debug(f"Protected path {path} - Token: {bool(token)}, Student: {bool(student_data)}")
-        
+
         if token and student_data:
             try:
-                # Créer le client API avec le token
+                # IMPORTANT : Créer le client API et l'attacher à la requête
                 request.odoo_client = get_api_client(token)
                 request.student = student_data
                 logger.debug(f"API client attached for {student_data.get('name')}")
-                
-                return self.get_response(request)
-                
+
+                # Continuer le traitement de la requête
+                response = self.get_response(request)
+                return response
+
             except Exception as e:
                 logger.error(f"Error creating API client: {str(e)}")
                 messages.error(request, "Erreur de session. Veuillez vous reconnecter.")
+                request.session.flush()
                 return redirect('student:login')
         else:
-            # Rediriger vers le login
+            # Pas de token - rediriger vers le login
             logger.debug(f"No auth for {path}, redirecting to login")
             messages.warning(request, "Veuillez vous connecter pour accéder à cette page.")
-            
-            # IMPORTANT: Sauvegarder l'URL demandée pour rediriger après login
+
+            # Sauvegarder l'URL demandée pour rediriger après login
             if path not in ['/login/', '/logout/', '/']:
                 request.session['next_url'] = path
-            
+
             return redirect('student:login')
+
 
 class OdooAPIErrorMiddleware:
     """Middleware pour gérer les erreurs API globalement"""
