@@ -4,17 +4,41 @@ Django settings for ENSIASD Student Portal
 import os
 from pathlib import Path
 from decouple import config, Csv
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production-xyz123')
+_INSECURE_DEFAULT_SECRET_KEY = 'django-insecure-change-me-in-production-xyz123'
+
+
+def _resolve_secret_key(debug, value):
+    """
+    A weak default SECRET_KEY is only acceptable in DEBUG (local dev
+    convenience). In production (DEBUG=False), it must be explicitly
+    provided via .env/the environment.
+    """
+    if value:
+        return value
+    if debug:
+        return _INSECURE_DEFAULT_SECRET_KEY
+    raise ImproperlyConfigured(
+        "SECRET_KEY must be set (via .env or the environment) when DEBUG=False."
+    )
+
+
+def _resolve_session_cookie_secure(debug):
+    """Session cookie must only be sent over HTTPS outside of local dev."""
+    return not debug
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-# 
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = _resolve_secret_key(DEBUG, config('SECRET_KEY', default=None))
+
+#
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,testserver', cast=Csv())
 
 # Application definition
@@ -127,7 +151,7 @@ ODOO_API_TIMEOUT = config('ODOO_API_TIMEOUT', default=30, cast=int)
 # =============================================================================
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_AGE = 86400  # 24 heures
-SESSION_COOKIE_SECURE = False  
+SESSION_COOKIE_SECURE = _resolve_session_cookie_secure(DEBUG)
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_SAVE_EVERY_REQUEST = True
