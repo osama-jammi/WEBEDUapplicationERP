@@ -1,0 +1,29 @@
+# Byte-compiled / cache Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environnement local (contient des identifiants) — voir django_ensiasd/.env.example
+django_ensiasd/.env
+
+# Base de données locale SQLite (cache de session Django, pas une source de vérité)
+django_ensiasd/db.sqlite3
+
+# Logs applicatifs
+django_ensiasd/logs/
+
+# Fichiers statiques collectés / médias uploadés
+django_ensiasd/staticfiles/
+django_ensiasd/media/
+
+# Environnements virtuels Python
+venv/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,5 +1,12 @@
 """
 Test simplifié du flux de connexion
+
+Script manuel (pas une suite de tests automatisée) : nécessite un compte
+étudiant de TEST dédié, jamais un compte réel. Les identifiants sont lus
+depuis l'environnement (ou .env, comme le reste de la config Django) :
+- TEST_STUDENT_CNE
+- TEST_STUDENT_PASSWORD
+Voir .env.example pour le format attendu.
 """
 import os
 import sys
@@ -9,7 +16,19 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 sys.path.insert(0, os.path.dirname(__file__))
 django.setup()
 
+from decouple import config
 from django.test import Client
+
+TEST_STUDENT_CNE = config('TEST_STUDENT_CNE', default=None)
+TEST_STUDENT_PASSWORD = config('TEST_STUDENT_PASSWORD', default=None)
+
+if not TEST_STUDENT_CNE or not TEST_STUDENT_PASSWORD:
+    print(
+        "ERREUR: TEST_STUDENT_CNE et TEST_STUDENT_PASSWORD doivent être "
+        "définis (dans .env ou l'environnement) avant de lancer ce script. "
+        "Utilisez un compte étudiant de TEST dédié. Voir .env.example."
+    )
+    sys.exit(1)
 
 print("="*60)
 print("TEST SIMPLIFIÉ DU LOGIN")
@@ -26,8 +45,8 @@ print(f"   Redirigé vers: {response.redirect_chain[-1][0] if response.redirect_
 # 2. Se connecter
 print("\n2. Connexion:")
 response = client.post('/login/', {
-    'cne': 'R130189241',
-    'password': 'admin1',
+    'cne': TEST_STUDENT_CNE,
+    'password': TEST_STUDENT_PASSWORD,
     'remember_me': False
 }, follow=False)
 
@@ -43,10 +62,11 @@ if response.status_code == 302:
     # Vérifier le contenu
     if response.status_code == 200:
         print("   ✓ Dashboard accessible!")
-        # Vérifier si le nom de l'étudiant est dans la page
+        # Vérifier si le nom de l'étudiant (renvoyé en session) est dans la page
         content = response.content.decode('utf-8')
-        if 'jammi osama' in content:
-            print("   ✓ Nom de l'étudiant trouvé!")
+        session_student_name = client.session.get('student_data', {}).get('name')
+        if session_student_name and session_student_name.lower() in content.lower():
+            print(f"   ✓ Nom de l'étudiant trouvé ({session_student_name})!")
         else:
             print("   ✗ Nom de l'étudiant non trouvé")
             print(f"   Contenu (premières 1000 chars): {content[:1000]}")
