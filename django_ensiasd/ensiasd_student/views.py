@@ -12,7 +12,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 
 from .api_client import get_api_client, OdooAPIError
-from .forms import LoginForm, ChangePasswordForm
+from .forms import LoginForm, ChangePasswordForm, ReclamationForm
 
 logger = logging.getLogger(__name__)
 
@@ -422,6 +422,63 @@ class ChangePasswordView(View):
             logger.warning(f"Form validation errors: {form.errors}")
 
         return render(request, self.template_name, {'form': form})
+
+
+class ReclamationsView(View):
+    """Vue des réclamations étudiants"""
+    template_name = 'student/reclamations.html'
+
+    def get(self, request):
+        client = request.odoo_client
+        form = ReclamationForm()
+        reclamations = []
+        try:
+            res = client.get_reclamations()
+            if res.get('success'):
+                reclamations = res.get('data', [])
+        except OdooAPIError as e:
+            messages.error(request, f"Erreur lors du chargement des réclamations: {e.message}")
+        except Exception:
+            logger.exception("Reclamations view GET error")
+            messages.error(request, "Impossible de charger les réclamations")
+
+        return render(request, self.template_name, {
+            'form': form,
+            'reclamations': reclamations,
+        })
+
+    def post(self, request):
+        form = ReclamationForm(request.POST)
+        client = request.odoo_client
+        if form.is_valid():
+            try:
+                res = client.create_reclamation(form.cleaned_data)
+                if res.get('success'):
+                    messages.success(request, "Votre réclamation a été transmise avec succès à l'administration.")
+                    return redirect('student:reclamations')
+                else:
+                    err = res.get('error', {}).get('message', 'Erreur lors de la soumission')
+                    messages.error(request, err)
+            except OdooAPIError as e:
+                messages.error(request, f"Erreur API: {e.message}")
+            except Exception:
+                logger.exception("Reclamations view POST error")
+                messages.error(request, "Erreur inattendue lors de la transmission")
+
+        reclamations = []
+        try:
+            res = client.get_reclamations()
+            if res.get('success'):
+                reclamations = res.get('data', [])
+        except Exception:
+            pass
+
+        return render(request, self.template_name, {
+            'form': form,
+            'reclamations': reclamations,
+        })
+
+
 # =============================================================================
 # VUES API JSON (pour AJAX)
 # =============================================================================

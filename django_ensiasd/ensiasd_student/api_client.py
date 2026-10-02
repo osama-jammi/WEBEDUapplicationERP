@@ -247,6 +247,18 @@ class OdooAPIClient:
         return self.get('/modules')
     
     # =========================================================================
+    # RÉCLAMATIONS
+    # =========================================================================
+    
+    def get_reclamations(self) -> Dict[str, Any]:
+        """Récupère les réclamations de l'étudiant"""
+        return self.get('/reclamations')
+    
+    def create_reclamation(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Crée une nouvelle réclamation"""
+        return self.post('/reclamations', data=data)
+
+    # =========================================================================
     # UTILITAIRES
     # =========================================================================
     

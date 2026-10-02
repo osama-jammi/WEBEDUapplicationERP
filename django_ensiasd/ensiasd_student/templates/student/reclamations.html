@@ -1,0 +1,205 @@
+{% extends 'student/base.html' %}
+
+{% block title %}Mes Réclamations - Portail Étudiant{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-chat-left-dots text-primary me-2"></i>
+                Mes Réclamations
+            </h1>
+            <p class="text-muted mb-0">Déposez et suivez vos demandes administratives et pédagogiques auprès de l'école</p>
+        </div>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newReclamationModal">
+            <i class="bi bi-plus-circle me-1"></i> Nouvelle réclamation
+        </button>
+    </div>
+
+    <!-- Modal Nouvelle Réclamation -->
+    <div class="modal fade" id="newReclamationModal" tabindex="-1" aria-labelledby="newReclamationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="newReclamationModalLabel">
+                        <i class="bi bi-send-plus me-2"></i> Soumettre une réclamation
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="{% url 'student:reclamations' %}">
+                    {% csrf_token %}
+                    <div class="modal-body p-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Catégorie <span class="text-danger">*</span></label>
+                                {{ form.categorie }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Priorité</label>
+                                {{ form.priorite }}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Objet / Sujet <span class="text-danger">*</span></label>
+                                {{ form.sujet }}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Description détaillée <span class="text-danger">*</span></label>
+                                {{ form.description }}
+                                <small class="text-muted">Mentionnez avec précision l'élément concerné (ex: nom du cours, date d'examen ou d'absence, justification).</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-check-circle me-1"></i> Envoyer la réclamation
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cartes Statut résumé -->
+    {% if reclamations %}
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm p-3 bg-white">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle bg-primary bg-opacity-10 p-3 text-primary me-3">
+                        <i class="bi bi-files fs-4"></i>
+                    </div>
+                    <div>
+                        <small class="text-muted d-block">Total</small>
+                        <span class="fs-4 fw-bold">{{ reclamations|length }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm p-3 bg-white">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle bg-warning bg-opacity-10 p-3 text-warning me-3">
+                        <i class="bi bi-hourglass-split fs-4"></i>
+                    </div>
+                    <div>
+                        <small class="text-muted d-block">En cours</small>
+                        <span class="fs-4 fw-bold">
+                            {% with count=0 %}
+                                {% for r in reclamations %}
+                                    {% if r.state == 'soumise' or r.state == 'en_cours' %}
+                                        <span class="d-none">{{ forloop.counter }}</span>
+                                    {% endif %}
+                                {% endfor %}
+                                {{ reclamations|length }}
+                            {% endwith %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm p-3 bg-white">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle bg-success bg-opacity-10 p-3 text-success me-3">
+                        <i class="bi bi-check-circle fs-4"></i>
+                    </div>
+                    <div>
+                        <small class="text-muted d-block">Traitées</small>
+                        <span class="fs-4 fw-bold text-success">
+                            {% for r in reclamations %}{% if r.state == 'traitee' %}&bull;{% endif %}{% endfor %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm p-3 bg-white">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle bg-info bg-opacity-10 p-3 text-info me-3">
+                        <i class="bi bi-shield-check fs-4"></i>
+                    </div>
+                    <div>
+                        <small class="text-muted d-block">Direct Odoo</small>
+                        <span class="badge bg-info mt-1">Synchronisé</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Liste des Réclamations -->
+    {% if reclamations %}
+    <div class="row g-4">
+        {% for r in reclamations %}
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-bold fs-6 text-primary">{{ r.name }}</span>
+                        <span class="badge bg-secondary">{{ r.categorie_label }}</span>
+                        {% if r.priorite == '1' %}
+                        <span class="badge bg-danger"><i class="bi bi-exclamation-triangle me-1"></i>Urgente</span>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ r.date_soumission }}</small>
+                        <span class="badge 
+                            {% if r.state == 'traitee' %}bg-success
+                            {% elif r.state == 'en_cours' %}bg-warning text-dark
+                            {% elif r.state == 'soumise' %}bg-info text-dark
+                            {% elif r.state == 'rejetee' %}bg-danger
+                            {% else %}bg-secondary{% endif %}">
+                            {{ r.state_label }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title fw-bold mb-2">{{ r.sujet }}</h5>
+                    <p class="card-text text-secondary mb-3">{{ r.description }}</p>
+
+                    <!-- Section Réponse de l'administration -->
+                    {% if r.reponse %}
+                    <div class="p-3 rounded bg-light border-start border-4 border-{% if r.state == 'traitee' %}success{% elif r.state == 'rejetee' %}danger{% else %}warning{% endif %}">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <strong class="text-dark">
+                                <i class="bi bi-reply-fill me-1"></i> Réponse de la scolarité :
+                            </strong>
+                            {% if r.date_traitement %}
+                            <small class="text-muted">{{ r.date_traitement }}</small>
+                            {% endif %}
+                        </div>
+                        <p class="mb-0 text-dark">{{ r.reponse }}</p>
+                    </div>
+                    {% else %}
+                    <div class="p-2 px-3 rounded bg-light text-muted small">
+                        <i class="bi bi-hourglass-split me-1"></i> En attente de traitement par le service scolarité.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- État vide -->
+    <div class="card border-0 shadow-sm py-5 text-center bg-white">
+        <div class="card-body">
+            <div class="rounded-circle bg-light p-4 d-inline-block mb-3 text-muted">
+                <i class="bi bi-chat-left-dots fs-1"></i>
+            </div>
+            <h4 class="fw-bold">Aucune réclamation enregistrée</h4>
+            <p class="text-muted max-w-md mx-auto mb-4">
+                Si vous avez une contestation concernant vos notes, une absence injustifiée, ou toute question administrative, déposez une réclamation directement ici.
+            </p>
+            <button type="button" class="btn btn-primary px-4" data-bs-toggle="modal" data-bs-target="#newReclamationModal">
+                <i class="bi bi-plus-circle me-1"></i> Déposer ma première réclamation
+            </button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

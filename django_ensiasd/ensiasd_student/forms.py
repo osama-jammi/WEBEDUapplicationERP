@@ -98,3 +98,46 @@ class DateRangeForm(forms.Form):
             raise forms.ValidationError("La date de fin doit être après la date de début")
         
         return cleaned_data
+
+
+class ReclamationForm(forms.Form):
+    """Formulaire de soumission d'une réclamation"""
+    CATEGORIES = [
+        ('note', 'Contestation de note'),
+        ('absence', 'Erreur sur absence'),
+        ('pedagogique', 'Pédagogique / Cours'),
+        ('administratif', 'Administratif'),
+        ('autre', 'Autre'),
+    ]
+    PRIORITES = [
+        ('0', 'Normale'),
+        ('1', 'Urgente'),
+    ]
+    
+    categorie = forms.ChoiceField(
+        label='Catégorie',
+        choices=CATEGORIES,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    priorite = forms.ChoiceField(
+        label='Priorité',
+        choices=PRIORITES,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    sujet = forms.CharField(
+        label='Objet / Sujet',
+        max_length=200,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ex: Contestation de la note du module Machine Learning',
+        })
+    )
+    description = forms.CharField(
+        label='Description détaillée',
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 4,
+            'placeholder': 'Précisez votre demande, le module concerné, la date...',
+        })
+    )
+
